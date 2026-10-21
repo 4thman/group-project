@@ -3,7 +3,7 @@ version: "3.9"
 services:
   app:
     build: .
-    image: krisking2024/notes-app:v1
+    image: prayo26/notes-app:v1
     ports:
       - "3000:3000"
     environment:
