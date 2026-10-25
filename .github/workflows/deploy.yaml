@@ -1,4 +1,3 @@
-
 name: Build and Deploy
 
 on:
@@ -198,6 +197,23 @@ jobs:
             exit 1
           fi
           echo "ACR_NAME=$ACR_NAME" >> "$GITHUB_ENV"
+
+      - name: Copy the PostgreSQL image into the registry
+        run: |
+          SOURCE=docker.io/library/postgres:16-alpine
+          if az acr repository show --name "$ACR_NAME" --image postgres:16-alpine > /dev/null 2>&1; then
+            echo "postgres:16-alpine is already in $ACR_NAME"
+            exit 0
+          fi
+          for i in 1 2 3 4 5; do
+            if az acr import --name "$ACR_NAME" --source "$SOURCE" --image postgres:16-alpine --force; then
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying in 30 seconds"
+            sleep 30
+          done
+          echo "::error::Could not copy $SOURCE into $ACR_NAME."
+          exit 1
 
       - name: 3. Build and push the image to ACR
         run: |

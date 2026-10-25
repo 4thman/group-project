@@ -83,7 +83,7 @@ resource "azurerm_container_group" "notes_app" {
   # PostgreSQL container
   container {
     name   = "postgres"
-    image  = "postgres:16-alpine"
+    image  = "${azurerm_container_registry.acr.login_server}/postgres:16-alpine"
     cpu    = 0.5
     memory = 1.0
 
