@@ -61,6 +61,7 @@ resource "azurerm_container_group" "notes_app" {
     image  = "${azurerm_container_registry.acr.login_server}/notes-app:v1"
     cpu    = 0.5
     memory = 1.5
+    commands = ["/bin/sh", "-c", "sleep 20 && node server.js"]
 
     ports {
       port     = 3000
