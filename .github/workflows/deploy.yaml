@@ -32,7 +32,7 @@ env:
   LOCATION: eastus
   MAIN_RESOURCE_GROUP: notes-app-rg
   STATE_RESOURCE_GROUP: notes-app-rg
-  STATE_STORAGE_ACCOUNT: notesapptfstate261024
+  STATE_STORAGE_ACCOUNT: notesvaultstate2510
   STATE_CONTAINER: tfstate
   TF_DIR: .
   IMAGE_NAME: notes-app
