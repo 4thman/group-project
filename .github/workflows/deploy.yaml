@@ -127,7 +127,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "~> 1.9"
+          terraform_version: "<2.0.0"
           terraform_wrapper: false
 
       - name: Register Azure resource providers
@@ -336,7 +336,7 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: "~> 1.9"
+          terraform_version: "<2.0.0"
           terraform_wrapper: false
 
       - name: Terraform destroy
