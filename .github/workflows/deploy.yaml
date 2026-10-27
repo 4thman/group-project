@@ -297,6 +297,46 @@ jobs:
           echo ""
           echo "LIVE ADDRESS: $LIVE_URL"
 
+      - name: 6. Check the custom domain
+        working-directory: ${{ env.TF_DIR }}
+        env:
+          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
+        run: |
+          if [ -z "$CUSTOM_DOMAIN" ]; then
+            echo "No custom domain set (repository variable CUSTOM_DOMAIN). Skipping."
+            exit 0
+          fi
+
+          TARGET=$(terraform output -raw container_group_fqdn 2>/dev/null || true)
+          if [ -z "$TARGET" ]; then
+            echo "::warning::No container_group_fqdn output found, cannot check $CUSTOM_DOMAIN."
+            exit 0
+          fi
+
+          TARGET_IP=$(getent ahostsv4 "$TARGET" | awk 'NR==1{print $1}')
+          DOMAIN_IP=$(getent ahostsv4 "$CUSTOM_DOMAIN" | awk 'NR==1{print $1}')
+
+          if [ "$APP_PORT" = "80" ]; then SITE="http://$CUSTOM_DOMAIN"; else SITE="http://$CUSTOM_DOMAIN:$APP_PORT"; fi
+
+          if [ -z "$DOMAIN_IP" ]; then
+            RESULT="Not resolving yet. Add a CNAME record: $CUSTOM_DOMAIN -> $TARGET (DNS can take minutes to hours)."
+            echo "::warning::$RESULT"
+          elif [ "$DOMAIN_IP" != "$TARGET_IP" ]; then
+            RESULT="$CUSTOM_DOMAIN resolves to $DOMAIN_IP, but the app is at $TARGET_IP. Check the CNAME value."
+            echo "::warning::$RESULT"
+          elif curl -fsS --max-time 10 -o /dev/null "$SITE/api/notes"; then
+            RESULT="Custom domain is live: $SITE"
+            echo "$RESULT"
+          else
+            RESULT="$CUSTOM_DOMAIN points at the app, but $SITE/api/notes did not answer."
+            echo "::warning::$RESULT"
+          fi
+
+          {
+            echo ""
+            echo "**Custom domain:** $RESULT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   confirm-destroy:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
     runs-on: ubuntu-latest
