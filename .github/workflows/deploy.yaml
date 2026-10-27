@@ -295,7 +295,7 @@ jobs:
           echo "LIVE ADDRESS: $LIVE_URL"
       - name: Verify QServers Domain Configuration
         env:
-          APP_DOMAIN: notes.yourdomain.com
+          APP_DOMAIN: notes.olaw.name.ng
         run: |
           set -euo pipefail
 
