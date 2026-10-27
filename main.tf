@@ -16,7 +16,7 @@ provider "azurerm" {
 terraform {
   backend "azurerm" {
     resource_group_name  = "notes-app-rg"
-    storage_account_name = "notesvaultstate2511"
+    storage_account_name = "notesvaultstate2510"
     container_name       = "tfstate"
     key                  = "notes-app.terraform.tfstate"
 
