@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-This project automates the build and deployment of a Dockerized **Node.js/Express Notes App** backed by **PostgreSQL 16** to **Azure Container Instances (ACI)**. The GitHub Actions workflow, **Build and Deploy**, provisions and manages infrastructure with Terraform, stores images in Azure Container Registry (ACR), checks application availability, and reports the live endpoint and deployment duration.
+This project automates the build and deployment of a Dockerized **Node.js/Express Notes App** backed by **PostgreSQL 16** to **Azure Container Instances (ACI)**. The GitHub Actions workflow, **Build and Deploy**, provisions and manages infrastructure with Terraform, stores images in Azure Container Registry (ACR), checks application availability, optionally verifies a QServers-managed custom domain, and reports the live endpoint and deployment duration.
 
 **Repository:** [payo26/lexszy-note-app](https://github.com/payo26/lexszy-note-app)  
 **Deployment region:** `eastus`  
@@ -27,6 +27,9 @@ flowchart TD
     I --> K[PostgreSQL Container: Port 5432]
     J --> L[GET /api/notes Health Check]
     L --> M[GitHub Actions Live URL and Timing Summary]
+    M --> N{CUSTOM_DOMAIN configured?}
+    N -->|Yes| O[Check external DNS and custom-domain endpoint]
+    N -->|No| P[Skip optional domain check]
 ```
 
 ## Technology Stack
@@ -292,6 +295,42 @@ When the health check succeeds, GitHub Actions publishes:
 
 The workflow also prints the live URL in the job logs.
 
+## Custom Domain Verification (QServers or Other External DNS Provider)
+
+The current workflow includes a final step named **`6. Check the custom domain`**. It uses the GitHub Actions **repository variable** `CUSTOM_DOMAIN` (not a repository secret). When that variable is empty, the check is skipped.
+
+To configure it:
+
+1. In GitHub, open **Settings → Secrets and variables → Actions → Variables** and create `CUSTOM_DOMAIN` with the hostname you intend to use, for example `notes.example.com` (hostname only, without `https://` or a port).
+2. Obtain the deployed ACI hostname from the Terraform output `container_group_fqdn` or from `az container show --query ipAddress.fqdn`.
+3. In the QServers DNS management panel, create a **CNAME** record for the `notes` host pointing to that actual Azure Container Instances FQDN. The DNS record is maintained at QServers, not Azure DNS.
+4. Run the deployment workflow. Its final step resolves the Azure hostname and custom hostname, compares their IPv4 addresses, and requests `/api/notes` on the custom hostname using HTTP and `APP_PORT` (`3000`).
+
+| Workflow setting | Value or behavior |
+| --- | --- |
+| `CUSTOM_DOMAIN` | GitHub repository variable; optional |
+| `ADDRESS_OUTPUT` | `container_group_fqdn` |
+| `ADDRESS_OUTPUT_FALLBACK` | `container_instance_ip` for the main deployment health check |
+| Custom-domain endpoint | `http://<CUSTOM_DOMAIN>:3000/api/notes` |
+| DNS update | Manual at QServers; workflow performs verification only |
+| Missing `container_group_fqdn` | Emits a warning and skips the custom-domain check |
+| DNS mismatch or unavailable endpoint | Emits a warning and adds a note to the job summary |
+
+The domain verification step does **not** provision a DNS record, enable TLS/HTTPS, or configure a reverse proxy. The ACI resource needs a `dns_name_label` for an FQDN to be available, and Terraform must expose that FQDN through an applied `container_group_fqdn` output.
+
+### Example Terraform output
+
+Add this only if it is not already defined, and use the actual Terraform resource address:
+
+```hcl
+output "container_group_fqdn" {
+  description = "Azure Container Instances hostname"
+  value       = azurerm_container_group.notes_app.fqdn
+}
+```
+
+The output becomes available in Terraform state after a successful apply. If the DNS label or output is absent, the workflow's domain check will not verify the QServers hostname.
+
 ## How to Run a Deployment
 
 ### Automatic Deployment
@@ -403,6 +442,18 @@ The `confirm-destroy` job checks the confirmation string. After successful confi
 | Terraform apply fails | Container group configuration, image references, Terraform state |
 | `/api/notes` check times out | Application logs, PostgreSQL logs, API startup, database connectivity |
 | Notes table missing | Application database initialization or migrations |
+
+### Custom domain check is skipped
+
+Check that the repository **variable** `CUSTOM_DOMAIN` is set, that Terraform defines and has applied the `container_group_fqdn` output, and that the ACI container group has an FQDN. The workflow deliberately issues a warning rather than failing deployment if the FQDN output is absent.
+
+### QServers DNS points to the wrong endpoint
+
+Use the ACI FQDN as the CNAME target in QServers. Do not include a URL scheme or port in the DNS record. The workflow compares the resolved IPv4 addresses and checks `http://<CUSTOM_DOMAIN>:3000/api/notes`; DNS propagation may take time.
+
+### Terraform backend authentication or missing state storage
+
+The workflow expects storage account `notesvaultstate2510` in `notes-app-rg` and a `tfstate` container. It creates the storage account/container when absent, but `terraform init` still requires the service principal to authenticate to the backend and have the required Blob data access. Ensure the backend block, state blob key, GitHub secrets, and `STATE_*` values agree. Preserve existing Terraform state when changing backend storage.
 
 ## Deployment Checklist
 
