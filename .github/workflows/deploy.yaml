@@ -237,7 +237,10 @@ jobs:
         env:
           COMMIT_TIME: ${{ github.event.head_commit.timestamp }}
         run: |
-          ADDRESS=$(terraform output -raw "$ADDRESS_OUTPUT" 2>/dev/null || terraform output -raw "$ADDRESS_OUTPUT_FALLBACK")
+          ADDRESS=$(terraform output -raw "$ADDRESS_OUTPUT" 2>/dev/null || true)
+          if [ -z "$ADDRESS" ]; then
+            ADDRESS=$(terraform output -raw "$ADDRESS_OUTPUT_FALLBACK")
+          fi
           case "$ADDRESS" in
             http*) LIVE_URL="$ADDRESS" ;;
             *) if [ "$APP_PORT" = "80" ]; then LIVE_URL="http://$ADDRESS"; else LIVE_URL="http://$ADDRESS:$APP_PORT"; fi ;;
