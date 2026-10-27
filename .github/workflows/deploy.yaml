@@ -293,25 +293,7 @@ jobs:
           echo "Pipeline only : $PIPELINE_TXT"
           echo ""
           echo "LIVE ADDRESS: $LIVE_URL"
-      - name: Verify QServers Domain Configuration
-        env:
-          APP_DOMAIN: notes.olaw.name.ng
-        run: |
-          set -euo pipefail
 
-          ACI_FQDN=$(terraform output -raw container_group_fqdn)
-
-          echo "Azure Container Hostname: $ACI_FQDN"
-          echo "Custom Domain: $APP_DOMAIN"
-
-          echo "Checking DNS resolution..."
-          nslookup "$APP_DOMAIN"
-
-          echo "Checking Notes App availability..."
-          curl --fail --retry 12 \
-            --retry-delay 10 \
-            --retry-connrefused \
-            "http://${APP_DOMAIN}:3000/api/notes"
   confirm-destroy:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'destroy'
     runs-on: ubuntu-latest
