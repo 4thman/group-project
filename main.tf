@@ -124,3 +124,12 @@ resource "azurerm_container_registry" "acr" {
 output "container_instance_ip" {
   value = azurerm_container_group.notes_app.ip_address
 }
+output "container_group_fqdn" {
+  description = "Public DNS hostname of the Notes App"
+  value       = azurerm_container_group.notes_app.fqdn
+}
+
+output "container_instance_ip" {
+  description = "Public IP address of the Notes App"
+  value       = azurerm_container_group.notes_app.ip_address
+}
