@@ -50,8 +50,6 @@ resource "azurerm_container_group" "notes_app" {
   resource_group_name = azurerm_resource_group.rg.name
   os_type             = "Linux"
   ip_address_type     = "Public"
-  dns_name_label      = "notes-app" 
-
   image_registry_credential {
     server   = azurerm_container_registry.acr.login_server
     username = azurerm_container_registry.acr.admin_username
